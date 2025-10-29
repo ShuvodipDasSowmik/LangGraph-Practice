@@ -12,22 +12,31 @@ app.use(cors(
 app.use('/', ollamaRoutes);
 
 
-const ollama = spawn("ollama", ["run", "phi3mini"], {
-    stdio: "inherit"
-});
+// Optionally spawn Ollama locally. If the binary is not available, do not crash the server.
+if (process.env.START_OLLAMA === '1') {
+    try {
+        const ollama = spawn("ollama", ["run", "phi3mini"], {
+            stdio: "inherit"
+        });
 
-// Ensure Ollama shuts down if Node exits
-process.on("exit", () => ollama.kill());
+        // Ensure Ollama shuts down if Node exits
+        process.on("exit", () => ollama.kill());
 
-process.on("SIGINT", () => {
-    ollama.kill();
-    process.exit();
-});
+        process.on("SIGINT", () => {
+            try { ollama.kill(); } catch (e) {}
+            process.exit();
+        });
 
-process.on("SIGTERM", () => {
-    ollama.kill();
-    process.exit();
-});
+        process.on("SIGTERM", () => {
+            try { ollama.kill(); } catch (e) {}
+            process.exit();
+        });
+    } catch (e) {
+        console.error('Failed to spawn Ollama process, continuing without it:', e?.message || e);
+    }
+} else {
+    console.log('START_OLLAMA not set; skipping spawning local Ollama to keep server running.');
+}
 
 
 
